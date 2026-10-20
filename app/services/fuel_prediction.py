@@ -183,8 +183,10 @@ def predict_fuel(gps_samples, vehicle_profile, started_at_ms, ended_at_ms):
         flags.append("insufficient_gps_samples")
         return result
     times = sorted(readings)
-    # Normalize before resampling to keep epoch values out of numerical operations.
-    time_s = np.array([(timestamp - start) / 1000 for timestamp in times])
+    # Subtract the first GPS timestamp before converting to seconds. A fractional
+    # offset from session start can otherwise turn an exact 30 s span into
+    # 29.999999999999996, losing a second when motion_windows floors the span.
+    time_s = np.array([(timestamp - times[0]) / 1000 for timestamp in times])
     speeds = np.array([readings[timestamp] for timestamp in times])
     rows, _, good = motion_windows(time_s, speeds, profile)
     result["rejected_windows"] = int((~good).sum())
